@@ -16,7 +16,7 @@ class Ambulance{
     bool isAvailale()const;
 
     void setLocation(string loaction);
-    coid setAvailability(bool status);
+    void setAvailability(bool status);
 };
 
 #endif
