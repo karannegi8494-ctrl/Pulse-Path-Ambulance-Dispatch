@@ -1,27 +1,59 @@
 #include "Ambulance.h"
 
-Ambulance::Ambulance(int id, string location) {
-    ambulanceID = id;
-    currentLocation = location;
-    available = true;
+void AmbulanceManager::addAmbulance(
+    int id, string name, bool available) {
+
+    ambulances.push_back({id, name, available});
+
+    cout << "Ambulance added successfully!\n";
 }
 
-int Ambulance::getID() const {
-    return ambulanceID;
+void AmbulanceManager::showAmbulances() {
+    cout << "\n===== AMBULANCE LIST =====\n";
+
+    if (ambulances.empty()) {
+        cout << "No ambulances registered.\n";
+        return;
+    }
+
+    for (const auto& a : ambulances) {
+        cout << "ID: " << a.id
+             << " | Name: " << a.name
+             << " | Status: ";
+
+        if (a.available)
+            cout << "Available";
+        else
+            cout << "Busy";
+
+        cout << endl;
+    }
 }
 
-string Ambulance::getLocation() const {
-    return currentLocation;
+void AmbulanceManager::updateStatus(int id, bool status) {
+    for (auto& a : ambulances) {
+        if (a.id == id) {
+            a.available = status;
+            cout << "Ambulance status updated!\n";
+            return;
+        }
+    }
+
+    cout << "Ambulance not found!\n";
 }
 
-bool Ambulance::isAvailable() const {
-    return available;
-}
+void AmbulanceManager::dispatchAmbulance() {
+    for (auto& a : ambulances) {
+        if (a.available) {
+            cout << "\nEmergency dispatched!\n";
+            cout << "Ambulance: " << a.name << endl;
 
-void Ambulance::setLocation(string location) {
-    currentLocation = location;
-}
+            a.available = false;
 
-void Ambulance::setAvailability(bool status) {
-    available = status;
+            cout << "Status: Busy\n";
+            return;
+        }
+    }
+
+    cout << "No ambulance available!\n";
 }
