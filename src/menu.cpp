@@ -1,9 +1,33 @@
 #include <iostream>
 #include "Ambulance.h"
+#include "graph.h"
+#include "EmergencyDispatch.h"
+#include <vector>
+#include <limits>
 using namespace std;
 
 int main() {
     AmbulanceManager manager;
+    Graph city;
+    AmbulanceManager manager;
+    const char *places[] = {"Central_Hospital", "North_Station", "Market",
+                            "City_Park", "Airport", "University", "Old_Town"};
+    vector<string> placeNames; // same order as graph ids (used to label distances)
+    for (const char *p : places)
+    {
+        city.addLocation(p);
+        placeNames.push_back(p);
+    }
+    // Sample city map
+    city.addRoad("Central_Hospital", "Market", 4);
+    city.addRoad("Central_Hospital", "North_Station", 6);
+    city.addRoad("Market", "City_Park", 3);
+    city.addRoad("Market", "Old_Town", 5);
+    city.addRoad("North_Station", "University", 4);
+    city.addRoad("City_Park", "University", 6);
+    city.addRoad("City_Park", "Airport", 9);
+    city.addRoad("Old_Town", "Airport", 7);
+
 
     // Sample ambulance data
     manager.addAmbulance(101, "Ambulance_A", true);
@@ -18,6 +42,10 @@ int main() {
         cout << "2. Add Ambulance\n";
         cout << "3. Dispatch Ambulance\n";
         cout << "4. Update Ambulance Status\n";
+        cout << "5. View City Map\n";
+        cout << "6. Show Distances From a Location\n";
+        cout << "7. Add Location to Map\n";
+        cout << "8. Add Road to Map\n";
         cout << "0. Exit\n";
 
         cout << "Enter your choice: ";
@@ -72,6 +100,83 @@ int main() {
                 manager.updateStatus(id, status);
                 break;
             }
+            
+        case 5:
+        {
+            cout << "\n--- City Map ---\n";
+            city.printGraph();
+            break;
+
+        case 6:
+        {
+            string from;
+                cout << "Enter starting location: ";
+                cin >> from;
+ 
+                if (!city.hasLocation(from)) {
+                    cout << "Unknown location!\n";
+                    break;
+                }
+ 
+                vector<double> dist = city.distancesFrom(from);
+                cout << "Travel time from " << from << ":\n";
+                for (int i = 0; i < (int)dist.size(); ++i) {
+                    cout << "  " << placeNames[i] << ": ";
+                    if (dist[i] == numeric_limits<double>::infinity()) cout << "unreachable\n";
+                    else cout << dist[i] << "\n";
+                }
+                break;
+            }
+ 
+
+        case 7:
+        {
+            string name;
+            cout << "Enter new location name (no spaces): ";
+            cin >> name;
+
+            if (city.hasLocation(name))
+            {
+                cout << "Location already exists!\n";
+                break;
+            }
+            city.addLocation(name);
+            placeNames.push_back(name);
+            cout << "Location added.\n";
+            break;
+        }
+
+        case 8:
+        {
+            string from, to;
+            double minutes;
+            int twoWay;
+
+            cout << "Enter first location: ";
+            cin >> from;
+            cout << "Enter second location: ";
+            cin >> to;
+            cout << "Enter travel time (minutes): ";
+            cin >> minutes;
+            cout << "Two-way road? (1 = Yes, 0 = No): ";
+            cin >> twoWay;
+
+            if (twoWay != 0 && twoWay != 1)
+            {
+                cout << "Invalid choice!\n";
+                break;
+            }
+
+            if (city.addRoad(from, to, minutes, twoWay == 1))
+            {
+                cout << "Road added.\n";
+            }
+            else
+            {
+                cout << "Could not add road (check locations and time).\n";
+            }
+            break;
+        }
 
             case 0:
                 cout << "Exiting PulsePath...\n";
