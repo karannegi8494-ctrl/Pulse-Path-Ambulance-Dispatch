@@ -4,12 +4,14 @@
 #include "EmergencyDispatch.h"
 #include <vector>
 #include <limits>
+#include "Hospital.h"
 using namespace std;
 
 int main() {
     AmbulanceManager manager;
     Graph city;
     AmbulanceManager manager;
+    HospitalSelection hospitalManager;
     const char *places[] = {"Central_Hospital", "North_Station", "Market",
                             "City_Park", "Airport", "University", "Old_Town"};
     vector<string> placeNames; // same order as graph ids (used to label distances)
@@ -46,6 +48,9 @@ int main() {
         cout << "6. Show Distances From a Location\n";
         cout << "7. Add Location to Map\n";
         cout << "8. Add Road to Map\n";
+        cout << "9. Add Hospital\n";
+        cout << "10. View Hospitals\n";
+        cout << "11. Select Best Hospital\n";
         cout << "0. Exit\n";
 
         cout << "Enter your choice: ";
@@ -177,6 +182,61 @@ int main() {
             }
             break;
         }
+        
+case 9: {
+    int id, totalBeds, occupiedBeds;
+    string name, location;
+    int status;
+
+    cout << "Enter Hospital ID: ";
+    cin >> id;
+
+    cout << "Enter Hospital Name (no spaces): ";
+    cin >> name;
+
+    cout << "Enter Hospital Location (must exist on city map): ";
+    cin >> location;
+
+    if (!city.hasLocation(location)) {
+        cout << "Location does not exist on city map!\n";
+        break;
+    }
+
+    cout << "Hospital Available? (1 = Yes, 0 = No): ";
+    cin >> status;
+
+    if (status != 0 && status != 1) {
+        cout << "Invalid status!\n";
+        break;
+    }
+
+    cout << "Enter Total Beds: ";
+    cin >> totalBeds;
+
+    cout << "Enter Occupied Beds: ";
+    cin >> occupiedBeds;
+
+    hospitalManager.addHospital(
+        id, name, location, status == 1,
+        totalBeds, occupiedBeds
+    );
+    break;
+}
+
+case 10:
+    hospitalManager.showHospitals();
+    break;
+
+case 11: {
+    string patientLocation;
+
+    cout << "Enter Patient Location: ";
+    cin >> patientLocation;
+
+    hospitalManager.selectHospital(city, patientLocation);
+    break;
+}
+
 
             case 0:
                 cout << "Exiting PulsePath...\n";

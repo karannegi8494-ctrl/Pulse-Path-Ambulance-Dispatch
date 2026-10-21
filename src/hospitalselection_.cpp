@@ -1,161 +1,107 @@
-
 #include <iostream>
-#include <vector>
-#include <string>
-#include <queue>
-#include <climits>
-#include <functional>
+#include "hospital.h"
+
 using namespace std;
 
-class Graph {
-private:
-    int V;
-    vector<vector<pair<int, int>>> adj;
+void HospitalSelection::addHospital(
+    int id, string name, string location,
+    bool available, int totalBeds, int occupiedBeds) {
 
-public:
-    Graph(int vertices) {
-        V = vertices;
-        adj.resize(V);
+    if (id <= 0 || name.empty() || location.empty() ||
+        totalBeds < 0 || occupiedBeds < 0 ||
+        occupiedBeds > totalBeds) {
+        cout << "Invalid hospital details!\n";
+        return;
     }
 
-    void addRoad(int u, int v, int time) {
-        adj[u].push_back({v, time});
-        adj[v].push_back({u, time});
-    }
-
-    vector<int> dijkstra(int source) {
-        vector<int> dist(V, INT_MAX);
-
-        priority_queue<
-            pair<int, int>,
-            vector<pair<int, int>>,
-            greater<pair<int, int>>
-        > pq;
-
-        dist[source] = 0;
-        pq.push({0, source});
-
-        while (!pq.empty()) {
-            int time = pq.top().first;
-            int node = pq.top().second;
-            pq.pop();
-
-            if (time > dist[node])
-                continue;
-
-            for (auto road : adj[node]) {
-                int nextNode = road.first;
-                int roadTime = road.second;
-
-                if (dist[node] != INT_MAX &&
-                    dist[node] + roadTime < dist[nextNode]) {
-                    dist[nextNode] = dist[node] + roadTime;
-                    pq.push({dist[nextNode], nextNode});
-                }
-            }
+    for (const auto& h : hospitals) {
+        if (h.id == id) {
+            cout << "Hospital ID already exists!\n";
+            return;
         }
-
-        return dist;
-    }
-};
-
-struct Hospital {
-    int id;
-    string name;
-    int location;
-    bool available;
-};
-
-class HospitalSelection {
-private:
-    vector<Hospital> hospitals;
-
-public:
-    void addHospital(int id, string name, int location,
-                     bool available) {
-        hospitals.push_back({id, name, location, available});
     }
 
-    int selectHospital(Graph &g, int patientLocation) {
-        vector<int> dist = g.dijkstra(patientLocation);
+    hospitals.push_back({
+        id, name, location, available, totalBeds, occupiedBeds
+    });
 
-        int selected = -1;
-        int minTime = INT_MAX;
+    cout << "Hospital added successfully!\n";
+}
 
-        for (int i = 0; i < hospitals.size(); i++) {
-            int loc = hospitals[i].location;
+void HospitalSelection::showHospitals() const {
+    cout << "\n===== HOSPITAL LIST =====\n";
 
-            if (hospitals[i].available &&
-                loc >= 0 && loc < dist.size() &&
-                dist[loc] < minTime) {
-                minTime = dist[loc];
-                selected = i;
-            }
+    if (hospitals.empty()) {
+        cout << "No hospitals registered.\n";
+        return;
+    }
+
+    for (const auto& h : hospitals) {
+        cout << "ID: " << h.id
+             << " | Name: " << h.name
+             << " | Location: " << h.location
+             << " | Status: "
+             << (h.available ? "Available" : "Unavailable")
+             << " | Beds available: "
+             << h.totalBeds - h.occupiedBeds
+             << "/" << h.totalBeds << '\n';
+    }
+}
+
+void HospitalSelection::selectHospital(
+    const Graph& city, const string& patientLocation) const {
+
+    if (!city.hasLocation(patientLocation)) {
+        cout << "Unknown patient location!\n";
+        return;
+    }
+
+    const Hospital* selected = nullptr;
+    PathResult bestRoute;
+
+    for (const auto& h : hospitals) {
+        if (!h.available || h.occupiedBeds >= h.totalBeds)
+            continue;
+
+        if (!city.hasLocation(h.location))
+            continue;
+
+        PathResult route =
+            city.shortestPath(patientLocation, h.location);
+
+        if (!route.reachable)
+            continue;
+
+        if (selected == nullptr ||
+            route.distance < bestRoute.distance) {
+            selected = &h;
+            bestRoute = route;
         }
-
-        cout << "\n--- Hospital Selection Result ---\n";
-
-        if (selected == -1) {
-            cout << "No suitable hospital available.\n";
-            return -1;
-        }
-
-        cout << "Patient Location: "
-             << patientLocation << endl;
-
-        cout << "Selected Hospital: "
-             << hospitals[selected].name << endl;
-
-        cout << "Hospital ID: "
-             << hospitals[selected].id << endl;
-
-        cout << "Hospital Location: "
-             << hospitals[selected].location << endl;
-
-        cout << "Estimated Travel Time: "
-             << minTime << " minutes\n";
-
-        return hospitals[selected].id;
-    }
-};
-
-int main() {
-    // Demo graph: replace with your team's Graph module.
-    Graph g(6);
-
-    g.addRoad(0, 1, 4);
-    g.addRoad(0, 2, 2);
-    g.addRoad(1, 2, 1);
-    g.addRoad(1, 3, 5);
-    g.addRoad(2, 3, 8);
-    g.addRoad(2, 4, 10);
-    g.addRoad(3, 4, 2);
-    g.addRoad(3, 5, 6);
-    g.addRoad(4, 5, 3);
-
-    HospitalSelection hs;
-
-    hs.addHospital(101, "City Hospital", 3, true);
-    hs.addHospital(102, "AIIMS Hospital", 5, true);
-    hs.addHospital(103, "Apollo Hospital", 4, false);
-
-    int patientLocation;
-
-    cout << "Enter patient location ID (0-5): ";
-    cin >> patientLocation;
-
-    if (patientLocation < 0 || patientLocation >= 6) {
-        cout << "Invalid patient location!\n";
-        return 0;
     }
 
-    // Emergency Dispatch can call this function.
-    int hospitalID = hs.selectHospital(g, patientLocation);
+    cout << "\n===== HOSPITAL SELECTION RESULT =====\n";
 
-    if (hospitalID != -1) {
-        cout << "\nHospital ID sent to Emergency Dispatch: "
-             << hospitalID << endl;
+    if (selected == nullptr) {
+        cout << "No suitable hospital with available beds found!\n";
+        return;
     }
 
-    return 0;
+    cout << "Patient location: " << patientLocation << '\n';
+    cout << "Selected hospital: " << selected->name << '\n';
+    cout << "Hospital ID: " << selected->id << '\n';
+    cout << "Hospital location: " << selected->location << '\n';
+    cout << "Available beds: "
+         << selected->totalBeds - selected->occupiedBeds << '\n';
+    cout << "Estimated travel time: "
+         << bestRoute.distance << " minutes\n";
+
+    cout << "Route: ";
+    for (size_t i = 0; i < bestRoute.path.size(); ++i) {
+        cout << bestRoute.path[i];
+
+        if (i + 1 < bestRoute.path.size())
+            cout << " -> ";
+    }
+
+    cout << '\n';
 }
