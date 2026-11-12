@@ -7,10 +7,65 @@
 #include "Hospital.h"
 using namespace std;
 
+namespace {
+
+class AmbulanceManagerProvider : public AmbulanceProvider {
+public:
+    explicit AmbulanceManagerProvider(const AmbulanceManager& manager) : manager_(manager) {}
+
+    vector<AmbulanceSnapshot> getAmbulances() const override {
+        vector<AmbulanceSnapshot> snapshots;
+        const vector<Ambulance>& ambulances = manager_.getAmbulances();
+        snapshots.reserve(ambulances.size());
+        for (const Ambulance& ambulance : ambulances) {
+            snapshots.push_back({ambulance.id, ambulance.currentLocation, ambulance.available});
+        }
+        return snapshots;
+    }
+
+private:
+    const AmbulanceManager& manager_;
+};
+
+class GraphRoutingAdapter : public RoutingService {
+public:
+    explicit GraphRoutingAdapter(const Graph& city) : city_(city) {}
+
+    bool isValidLocation(const string& location) const override {
+        return city_.hasLocation(location);
+    }
+
+    RouteEstimate findShortestRoute(const string& start,
+                                    const string& destination) const override {
+        const PathResult path = city_.shortestPath(start, destination);
+        return {path.reachable, path.distance, path.path};
+    }
+
+private:
+    const Graph& city_;
+};
+
+void printDispatchFailure(DispatchStatus status) {
+    switch (status) {
+        case DispatchStatus::InvalidEmergencyLocation:
+            cout << "Emergency location does not exist on the city map.\n";
+            break;
+        case DispatchStatus::NoAvailableAmbulances:
+            cout << "No ambulance is currently available.\n";
+            break;
+        case DispatchStatus::NoReachableAmbulances:
+            cout << "No available ambulance can reach that location.\n";
+            break;
+        case DispatchStatus::Success:
+            break;
+    }
+}
+
+} // namespace
+
 int main() {
     AmbulanceManager manager;
     Graph city;
-    AmbulanceManager manager;
     HospitalSelection hospitalManager;
     const char *places[] = {"Central_Hospital", "North_Station", "Market",
                             "City_Park", "Airport", "University", "Old_Town"};
@@ -32,9 +87,9 @@ int main() {
 
 
     // Sample ambulance data
-    manager.addAmbulance(101, "Ambulance_A", true);
-    manager.addAmbulance(102, "Ambulance_B", true);
-    manager.addAmbulance(103, "Ambulance_C", false);
+    manager.addAmbulance(101, "Ambulance_A", "North_Station", true);
+    manager.addAmbulance(102, "Ambulance_B", "Market", true);
+    manager.addAmbulance(103, "Ambulance_C", "Airport", false);
 
     int choice;
 
@@ -65,12 +120,21 @@ int main() {
                 int id;
                 string name;
                 int status;
+                string location;
 
                 cout << "Enter ambulance ID: ";
                 cin >> id;
 
                 cout << "Enter ambulance name: ";
                 cin >> name;
+
+                cout << "Enter ambulance location: ";
+                cin >> location;
+
+                if (!city.hasLocation(location)) {
+                    cout << "Location does not exist on city map!\n";
+                    break;
+                }
 
                 cout << "Available? (1 = Yes, 0 = No): ";
                 cin >> status;
@@ -80,13 +144,37 @@ int main() {
                     break;
                 }
 
-                manager.addAmbulance(id, name, status);
+                manager.addAmbulance(id, name, location, status == 1);
                 break;
             }
 
-            case 3:
-                manager.dispatchAmbulance();
+            case 3: {
+                string emergencyLocation;
+                cout << "Enter emergency location: ";
+                cin >> emergencyLocation;
+
+                AmbulanceManagerProvider provider(manager);
+                GraphRoutingAdapter routing(city);
+                EmergencyDispatch dispatch(provider, routing);
+                const DispatchResult result = dispatch.planDispatch(emergencyLocation);
+                if (!result.hasDispatch()) {
+                    printDispatchFailure(result.status);
+                    break;
+                }
+
+                if (!manager.dispatchAmbulance(result.ambulanceId)) {
+                    cout << "Dispatch failed because the ambulance is no longer available.\n";
+                    break;
+                }
+
+                cout << "\nEmergency dispatched with ambulance ID " << result.ambulanceId
+                     << ". Estimated travel time: " << result.estimatedTravelTime << " minutes\n";
+                cout << "Route: ";
+                for (size_t i = 0; i < result.route.size(); ++i) {
+                    cout << result.route[i] << (i + 1 == result.route.size() ? "\n" : " -> ");
+                }
                 break;
+            }
 
             case 4: {
                 int id, status;
@@ -111,6 +199,7 @@ int main() {
             cout << "\n--- City Map ---\n";
             city.printGraph();
             break;
+        }
 
         case 6:
         {

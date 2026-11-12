@@ -1,32 +1,26 @@
 #ifndef AMBULANCE_H
 #define AMBULANCE_H
 
-#include <iostream>
-#include <vector>
 #include <string>
-using namespace std;
+#include <vector>
 
 struct Ambulance {
     int id;
-    string name;
+    std::string name;
+    std::string currentLocation;
     bool available;
 };
 
 class AmbulanceManager {
 private:
-    vector<Ambulance> ambulances;
-
-    int getID()const;
-    string getLocation()const;
-    bool isAvailale()const;
-
-    void setLocation(string loaction);
-    void setAvailability(bool status);
+    std::vector<Ambulance> ambulances;
 public:
-    void addAmbulance(int id, string name, bool available);
-    void showAmbulances();
+    void addAmbulance(int id, const std::string& name,
+                      const std::string& currentLocation, bool available);
+    void showAmbulances() const;
     void updateStatus(int id, bool status);
-    void dispatchAmbulance();
+    bool dispatchAmbulance(int id);
+    const std::vector<Ambulance>& getAmbulances() const;
 };
 
 #endif

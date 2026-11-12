@@ -21,7 +21,7 @@ public:
 
 struct RouteEstimate {
     bool reachable;
-    int travelTime;
+    double travelTime;
     std::vector<std::string> route;
 };
 
@@ -43,7 +43,7 @@ enum class DispatchStatus {
 struct DispatchResult {
     DispatchStatus status;
     int ambulanceId;
-    int estimatedTravelTime;
+    double estimatedTravelTime;
     std::vector<std::string> route;
 
     bool hasDispatch() const;

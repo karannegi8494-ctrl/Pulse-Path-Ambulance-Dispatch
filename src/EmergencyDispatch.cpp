@@ -6,7 +6,7 @@ DispatchResult failure(DispatchStatus status) {
     DispatchResult result;
     result.status = status;
     result.ambulanceId = -1;
-    result.estimatedTravelTime = -1;
+    result.estimatedTravelTime = -1.0;
     return result;
 }
 
@@ -33,7 +33,7 @@ DispatchResult EmergencyDispatch::planDispatch(const std::string& emergencyLocat
     for (std::vector<AmbulanceSnapshot>::const_iterator it = ambulances.begin();
          it != ambulances.end();
          ++it) {
-        if (!it->available) {
+        if (it->id <= 0 || !it->available) {
             continue;
         }
 
@@ -44,7 +44,9 @@ DispatchResult EmergencyDispatch::planDispatch(const std::string& emergencyLocat
 
         const RouteEstimate estimate =
             routingService_.findShortestRoute(it->currentLocation, emergencyLocation);
-        if (!estimate.reachable || estimate.travelTime < 0 || estimate.route.empty()) {
+        // A reachable route must have a non-negative duration. The path is
+        // intentionally allowed to contain one location when start == end.
+        if (!estimate.reachable || estimate.travelTime < 0.0) {
             continue;
         }
 
